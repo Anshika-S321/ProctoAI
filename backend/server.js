@@ -5,15 +5,39 @@ import connectDB from "./config/db.js";
 import cookieParser from "cookie-parser";
 import examRoutes from "./routes/examRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+
 dotenv.config();
-connectDB();
+
+// Don't wait for DB connection if using mock DB
+if (process.env.USE_MOCK_DB !== "true") {
+  connectDB();
+} else {
+  connectDB(); // This will immediately return for mock DB
+}
+
 const app = express();
 const port = process.env.PORT || 5000;
 
-// to parse req boy
+// CORS middleware
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// to parse req body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", mode: process.env.USE_MOCK_DB === "true" ? "Mock DB" : "MongoDB" });
+});
 
 // Routes
 app.use("/api/users", userRoutes);
